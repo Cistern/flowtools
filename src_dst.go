@@ -9,8 +9,13 @@ import (
 )
 
 func main() {
+	opened := 0
+	closed := 0
+
 	udpAddr, _ := net.ResolveUDPAddr("udp", ":6343")
-	conn, _ := net.ListenUDP("udp", udpAddr)
+	conn, err := net.ListenUDP("udp", udpAddr)
+
+	fmt.Println(err)
 
 	buf := make([]byte, 65535)
 
@@ -25,10 +30,27 @@ func main() {
 					for _, record := range fs.Records {
 						if record.RecordType() == sflow.TypeRawPacketFlow {
 							r := record.(sflow.RawPacketFlowRecord)
-							_, ipHdr, _ := ethernetdecode.Decode(r.Header)
+							_, ipHdr, protoHdr := ethernetdecode.Decode(r.Header)
 							if ipHdr != nil && ipHdr.IpVersion() == 4 {
 								ipv4 := ipHdr.(ethernetdecode.Ipv4Header)
+								switch protoHdr.Protocol() {
+								case ethernetdecode.ProtocolTcp:
+									tcp := protoHdr.(ethernetdecode.TcpHeader)
+
+									// SYN+ACK flags
+									if tcp.Flags&18 != 0 {
+										opened++
+									}
+
+									// FIN+ACK flags
+									if tcp.Flags&17 != 0 {
+										closed++
+									}
+								case ethernetdecode.ProtocolUdp:
+
+								}
 								fmt.Printf("src: %v => dst: %v\n", net.IP(ipv4.Source[:]), net.IP(ipv4.Destination[:]))
+								fmt.Printf("TCP connections opened: %d, closed: %d\n", opened, closed)
 							}
 						}
 					}
