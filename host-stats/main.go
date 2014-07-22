@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/PreetamJinka/sflow-go"
+	"github.com/PreetamJinka/udpchan"
 
 	"fmt"
-	"net"
 	"time"
 )
 
@@ -14,14 +14,14 @@ func printDatagram(buf []byte) {
 	for _, sample := range dgram.Samples {
 		switch sample.SampleType() {
 		case sflow.TypeCounterSample:
+			fmt.Println("----")
+			fmt.Printf("  %v\n", dgram.Header.IpAddress)
 			for _, record := range sample.(sflow.CounterSample).Records {
 				printRecord(record)
 			}
 		default:
 		}
 	}
-
-	fmt.Println("----")
 }
 
 func printRecord(record sflow.Record) {
@@ -54,23 +54,13 @@ func printRecord(record sflow.Record) {
 }
 
 func main() {
-	udpAddr, err := net.ResolveUDPAddr("udp", ":6343")
+	c, err := udpchan.Listen(":6343", nil)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	conn, err := net.ListenUDP("udp", udpAddr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	buf := make([]byte, 65535)
-	for {
-		n, _, err := conn.ReadFromUDP(buf)
-		if err == nil {
-			printDatagram(buf[:n])
-		}
+	for buf := range c {
+		printDatagram(buf)
 	}
 }
