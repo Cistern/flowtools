@@ -38,7 +38,7 @@ func main() {
 									tcp := protoHdr.(ethernetdecode.TcpHeader)
 
 									// SYN+ACK flags
-									if tcp.Flags&18 != 0 {
+									if tcp.Flags&3 == 2 {
 										opened++
 									}
 
